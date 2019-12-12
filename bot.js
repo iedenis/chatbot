@@ -1,5 +1,4 @@
 const token = process.env.TOKEN;
-
 const Bot = require('node-telegram-bot-api');
 let bot;
 
@@ -13,7 +12,9 @@ else {
 
 console.log('Bot server started in the ' + process.env.NODE_ENV + ' mode');
 
-var customer = {}
+var customer = {
+
+}
 
 const countries = {
   en: [['Austria', 'Germany', 'Greece'], ['Israel', 'Island', 'Spain'], ['Italy', 'Canada', 'Cyprus'], ['Poland', 'Portugal', 'USA'], ['Turkey', 'France', 'Finland'], ['Montenegro', 'Czech Rep', 'Switzerland']],
@@ -58,12 +59,19 @@ bot.onText(/\/start/, msg => {
     }
   })
 })
-// bot.on('message', (msg) => {
-//   const name = msg.from.first_name;
-//   console.log("message", msg)
+
+bot.on('callback_query', query => {
+  switch(customer.step){
+    case 0 :  customer.requested_country=query.data; customer.step++; break;
+  }
+  bot.sendMessage(363747387, customer.requested_country)
+})
+//  bot.on('message', (msg) => {
+//    const name = msg.from.first_name;
+//    console.log("message", msg)
 //   bot.sendMessage(msg.chat.id, 'Hello, ' + name + '!').then(() => {
-//     // reply sent!
-//   });
-// });
+//      // reply sent!
+//    });
+//  });
 
 module.exports = bot;

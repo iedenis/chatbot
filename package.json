@@ -1,5 +1,5 @@
 {
-  "name": "heroku-node-telegram-bot",
+  "name": "ChatBot",
   "version": "0.1",
   "description": "Chat bot for website https://www.holylandcars.com",
   "main": "index.js",

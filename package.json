@@ -1,6 +1,6 @@
 {
   "name": "ChatBot",
-  "version": "0.1",
+  "version": "0.1.0",
   "description": "Chat bot for website https://www.holylandcars.com",
   "main": "index.js",
   "scripts": {

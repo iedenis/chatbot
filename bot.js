@@ -26,9 +26,9 @@ const car_classes = {
   en: [['A - mini cars', 'B - small cars'], ['C - medium cars', 'D - large cars'], ['E - exclusive cars'], ['F - luxury cars'], ['J - sport utility cars'], ['M - multi purpose'], ['S - sport cars']],
   ru: [['A - Микроавтомобили'], ['B - малые автомобили', 'C - средний класс'], ['D - большие автомобили'], ['E - бизнес класс'], ['F - представительские'], ['J - внедорожники'], ['M - минивены и УВП'], ['S - спорткупе']]
 }
-
+//date regexp ^(0[1-9]|[12][0-9]|3[01])[- /.](0[1-9]|1[012])[- /.](19|20)\d\d$
 const createOrder = () => {
-  return `Получен новый заказ: \n
+  return `*Получен новый заказ:* \n
  Страна: ${customer.requested_country}
  Дата получение автомобиля: ${customer.pickup_date}
  Дата возврата автомобиля: ${customer.drop_off_date}
@@ -39,20 +39,21 @@ const createOrder = () => {
 const customerOrder = () => {
   return customer.language_code === 'ru' ? `
   Ваш заказ принят и будет рассмотрен в ближайшее время. 
-  Заказ:
-  Страна: ${customer.requested_country}
-  Дата получение автомобиля: ${customer.pickup_date}
-  Дата возврата автомобиля: ${customer.drop_off_date}
-  Класс автомобиля: ${customer.requested_car_class}
-  [Для Связи](tg://user?id=${admin_id})
+  |*Заказ:*
+  | Страна: ${customer.requested_country}
+  | Дата получение автомобиля: ${customer.pickup_date}
+  | Дата возврата автомобиля: ${customer.drop_off_date}
+  | Класс автомобиля: ${customer.requested_car_class}
+  | [Для Связи](tg://user?id=${admin_id})
   `: `
   Your order has been received and will be processed as soon as possible.
-  Order: 
-  Country: ${customer.requested_country}
-  Pick up date: ${customer.pickup_date}
-  Return date: ${customer.drop_off_date}
-  Car class: ${customer.requested_car_class}
-  [For more details](tg://user?id=${admin_id})
+  
+  |*Order:* 
+  |Country: ${customer.requested_country}
+  |Pick up date: ${customer.pickup_date}
+  |Return date: ${customer.drop_off_date}
+  |Car class: ${customer.requested_car_class}
+  |[For more details](tg://user?id=${admin_id})
   `
 }
 
@@ -85,7 +86,7 @@ const reply = (user) => {
       `Hello ${user.first_name}. \nPlease choose a country you want to rent a car`,
       `Please insert a pick-up date`,
       `Please insert a drop-off date`,
-      `What class car do you prefer?` // Inline classes
+      `What car class do you prefer?`
     ],
 
     ru: [
@@ -116,13 +117,13 @@ bot.on('callback_query', query => {
   switch (customer.step) {
     case 0: customer.requested_country = query.data;
       customer.step++;
-      bot.sendMessage(customer.id, reply(customer))
+      bot.sendMessage(customer.id, reply(customer), { parse_mode: 'Markdown' })
         .catch(err => console.log(err.response.body))
       break;
 
     case 3: customer.requested_car_class = query.data;
       bot.sendMessage(admin_id, createOrder(), { parse_mode: 'Markdown' }).catch(err => console.log(err));
-      bot.sendMessage(admin_id, customerOrder(), { parse_mode: 'Markdown' }).catch(err => console.log(err));
+      bot.sendMessage(customer.id, customerOrder(), { parse_mode: 'Markdown' }).catch(err => console.log(err));
 
       break;
   }

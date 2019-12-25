@@ -1,5 +1,8 @@
 const token = process.env.TOKEN;
+const API_KEY = process.env.API_KEY;
+
 const Bot = require('node-telegram-bot-api');
+const fetch = require('node-fetch')
 let bot;
 
 if (process.env.NODE_ENV === 'production') {
@@ -12,19 +15,40 @@ else {
 
 console.log('Bot server started in the ' + process.env.NODE_ENV + ' mode');
 
-var customer = {
+var customer = {}
+var airports = [];
 
-}
 const admin_id = process.env.ADMIN_ID
+const url = 'https://raw.githubusercontent.com/algolia/datasets/master/airports/airports.json'
 
+/**Translate  */
+// getCitiesByCountryName = async country => {
+
+
+const getAirportByCityName = async city => {
+
+  return airports.filter(airport => airport.city === city);
+}
+
+
+const getCitiesByCountryName = async country => {
+  const response = await fetch(url);
+  const data = await response.json();
+  airports = data.filter(airport => airport.country === country)
+  const cities = [...new Set(airports.map((airport => airport.city)))]
+
+  //console.log(cities.slice(0, 9));
+  return cities.slice(0, 9);
+}
+//getCitiesByCountryName("Israel")
 const countries = {
-  en: [['Austria', 'Germany', 'Greece'], ['Israel', 'Island', 'Spain'], ['Italy', 'Canada', 'Cyprus'], ['Poland', 'Portugal', 'USA'], ['Turkey', 'France', 'Finland'], ['Montenegro', 'Czech Rep', 'Switzerland']],
-  ru: [['Австрия', 'Германия', 'Греция'], ['Израиль', 'Исландия', 'Испания'], ['Италия', 'Канада', 'Кипр'], ['Польша', 'Португалия', 'США'], ['Турция', 'Франция', 'Финляндия'], ['Черногория', 'Чехия', 'Швейцария']]
+  en: [['Austria', 'Germany', 'Greece'], ['Israel', 'Island', 'Spain'], ['Italy', 'Canada', 'Cyprus'], ['Poland', 'Portugal', 'USA'], ['Turkey', 'France', 'Finland'], ['Montenegro', 'Czech Rep', 'Switzerland'], ['Another country']],
+  ru: [['Австрия', 'Германия', 'Греция'], ['Израиль', 'Исландия', 'Испания'], ['Италия', 'Канада', 'Кипр'], ['Польша', 'Португалия', 'США'], ['Турция', 'Франция', 'Финляндия'], ['Черногория', 'Чехия', 'Швейцария'], ['Другая страна']]
 }
 
 const car_classes = {
-  en: [['A - mini cars', 'B - small cars'], ['C - medium cars', 'D - large cars'], ['E - exclusive cars'], ['F - luxury cars'], ['J - sport utility cars'], ['M - multi purpose'], ['S - sport cars']],
-  ru: [['A - Микроавтомобили'], ['B - малые автомобили', 'C - средний класс'], ['D - большие автомобили'], ['E - бизнес класс'], ['F - представительские'], ['J - внедорожники'], ['M - минивены и УВП'], ['S - спорткупе']]
+  en: [['Mini', 'Small', 'Medium '], ['Large', 'Exclusive', 'Luxury '], ['Sport ', 'Multi purpose', 'SUV']],
+  ru: [['Мини', 'Эконом', 'Компакт'], ['Универсал', 'Паркетник', 'Стандарт'], ['Люкс', 'Минивены', "Спорткар"]]
 }
 
 const months = {
@@ -32,14 +56,7 @@ const months = {
   ru: [['Январь', 'Февраль', 'Март'], ['Апрель', 'Май', 'Июнь'], ['Июль', 'Август', 'Сентябрь'], ['Октябрь', 'Ноябрь', 'Декабрь']]
 }
 
-// const numberOfMonth = (month) => {
-//   let monthNumber = 1;
-//   for (let i = 0; i < 4; i++) {
-//     for (let j = 0; j < 3; monthNumber++ , j++) {
-//       if (month === months.en[i][j]) return monthNumber;
-//     }
-//   }
-// }
+
 const daysInMonth = (month, year) => {
   let monthNumber = 1;
   let counter = 1;
@@ -135,6 +152,7 @@ const reply = (user) => {
   const messages = {
     en: [
       `Hello ${user.first_name}. \nPlease choose a country you want to rent a car ⬇️`,
+      `Please choose a city`,
       `Please choose a pick-up month ⬇️`,
       `Please choose a pick-up day ⬇️`,
       `Please choose a return month ⬇️`,
@@ -144,6 +162,7 @@ const reply = (user) => {
 
     ru: [
       `Доброго времени суток ${user.first_name}.\nВыберете страну, в которой Вы бы хотели снять машину ⬇️`,
+      `Выберете город`,
       `Выберете месяц получения автомобиля ⬇️`,
       `Выберете число месяца получения автомобиля ⬇️`,
       `Выберете месяц возврата автомобиля ⬇️`,
@@ -155,10 +174,9 @@ const reply = (user) => {
 }
 
 
-
 bot.onText(/\/start/, msg => {
   customer = msg.from;
-  //customer.language_code = 'ru'
+  customer.language_code = 'ru'
   customer.language_code = customer.language_code === 'ru' ? 'ru' : 'en'
   customer.step = 0;
   bot.sendMessage(msg.chat.id, reply(customer), {
@@ -189,6 +207,19 @@ const responseMonth = (user) => {
   }).catch(err => console.log(err));
 }
 
+const translate = async (word) => {
+  const translateUrl = `https://translate.yandex.net/api/v1.5/tr.json/translate?key=${API_KEY}&text=${word}&lang=en`
+  console.log(translateUrl)
+  const response = await fetch(translateUrl)
+  const data = await response.json();
+  console.log(data)
+
+}
+//translate('Берлин') TODO Translate the cities//
+const responseWithCitities = (user) => {
+  console.log(user.requested_country);
+  //if ()
+}
 const responseDay = (user, pickup) => {
   bot.sendMessage(user.id, reply(user), {
     reply_markup: {
@@ -200,21 +231,32 @@ const responseDay = (user, pickup) => {
 
 bot.on('callback_query', query => {
   customer.step++;
+  const lang = customer.language_code;
   switch (customer.step) {
-    case 1: customer.requested_country = query.data;
-      responseMonth(customer, true)
+    case 1:
+      if (query.data === countries[lang][countries[lang].length - 1][0]) {
+        //customer.step--;
+        bot.sendMessage(customer.id, lang === 'en' ?
+          'Please write the country where you want to rent a car' :
+          'Пожалуйста напишите страну, в которой вы хотите снять машину')
+      } else {
+        customer.requested_country = query.data;
+        // responseMonth(customer, true)
+        responseWithCitities(customer);
+      }
       break;
-    case 2: customer.pick_up_month = query.data;
+    case 2: break;
+    case 3: customer.pick_up_month = query.data;
       responseDay(customer, true);
       break;
-    case 3:
+    case 4:
       customer.pick_up_day = query.data;
       responseMonth(customer, false);
       break;
-    case 4: customer.return_month = query.data;
+    case 5: customer.return_month = query.data;
       responseDay(customer, false)
       break;
-    case 5: customer.return_day = query.data;
+    case 6: customer.return_day = query.data;
       bot.sendMessage(customer.id, reply(customer), {
         reply_markup: {
           inline_keyboard:
@@ -223,33 +265,29 @@ bot.on('callback_query', query => {
       }).catch(err => console.log(err))
       break;
 
-    case 6: customer.requested_car_class = query.data;
+    case 7: customer.requested_car_class = query.data;
       bot.sendMessage(admin_id, createOrder(), { parse_mode: 'Markdown' }).catch(err => console.log(err));
       bot.sendMessage(customer.id, customerOrder(), { parse_mode: 'Markdown' }).catch(err => console.log(err));
-
       break;
   }
 })
 
-// bot.on('message', msg => {
-//   if (customer.id) {
-//     switch (customer.step) {
-//       case 9: customer.pickup_date = msg.text;
-//         customer.step++;
-//         bot.sendMessage(customer.id, reply(customer)).catch(err => console.log(err));
-//         break;
-//       case 8: customer.return_date = msg.text;
-//         customer.step++;
+bot.on('message', msg => {
+  if (customer.step !== undefined) {
 
-//         bot.sendMessage(msg.chat.id, reply(customer), {
-//           reply_markup: {
-//             inline_keyboard:
-//               classChoice(customer)
-//           }
-//         }).catch(err => console.log(err))
-//         break;
-//     }
-//   }
-// })
+    if (customer.step === 1) {
+      customer.requested_country = msg.text;
+      responseMonth(customer, true)
+    }
+    else {
+      bot.sendMessage(msg.chat.id, customer.language_code === 'en' ? 'Something went wrong. Please restart the process' : 'Что-то пошло не так. Начните сначала', {
+        reply_markup: {
+
+          keyboard: [['/start']]
+        }
+      }).catch(err => console.log(err))
+    }
+  }
+})
 
 module.exports = bot;

@@ -80,6 +80,7 @@ const createOrder = () => {
  `
 }
 const customerOrder = () => {
+  customer.isFinished = true;
   return customer.language_code === 'ru' ? `
   Ваш заказ принят и будет рассмотрен в ближайшее время. 
   |*Заказ:*
@@ -200,6 +201,18 @@ const reply = (user) => {
 
 bot.onText(/\/start/, msg => {
   customer = msg.from;
+  customer.isFinished = false;
+  setTimeout(() => {
+    if (!customer.isFinished) {
+      bot.sendMessage(admin_id,
+        `Начал заказ и не закончил. 
+    ---------------------
+    |  [Заказчик](tg://user?id=${customer.id}) |
+    ---------------------
+      `,
+        { parse_mode: 'Markdown' })
+    }
+  }, 600000);
   //customer.language_code = 'ru'
   customer.language_code = customer.language_code === 'ru' ? 'ru' : 'en'
   customer.step = 0;
@@ -276,7 +289,7 @@ bot.on('callback_query', async query => {
       }
       break;
     case 2: customer.requested_city = await query.data
-      console.log(customer.requested_city)
+     // consoleconsole.log(customer.requested_city)
       responseMonth(customer, true)
       break;
     case 3: customer.pick_up_month = query.data;

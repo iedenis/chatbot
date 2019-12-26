@@ -21,25 +21,13 @@ var airports = [];
 const admin_id = process.env.ADMIN_ID
 const url = 'https://raw.githubusercontent.com/algolia/datasets/master/airports/airports.json'
 
-/**Translate  */
-// getCitiesByCountryName = async country => {
-
-
 const getAirportByCityName = async city => {
 
   return airports.filter(airport => airport.city === city);
 }
 
 
-const getCitiesByCountryName = async country => {
-  const response = await fetch(url);
-  const data = await response.json();
-  airports = data.filter(airport => airport.country === country)
-  const cities = [...new Set(airports.map((airport => airport.city)))]
 
-  //console.log(cities.slice(0, 9));
-  return cities.slice(0, 9);
-}
 //getCitiesByCountryName("Israel")
 const countries = {
   en: [['Austria', 'Germany', 'Greece'], ['Israel', 'Island', 'Spain'], ['Italy', 'Canada', 'Cyprus'], ['Poland', 'Portugal', 'USA'], ['Turkey', 'France', 'Finland'], ['Montenegro', 'Czech Rep', 'Switzerland'], ['Another country']],
@@ -56,6 +44,17 @@ const months = {
   ru: [['Январь', 'Февраль', 'Март'], ['Апрель', 'Май', 'Июнь'], ['Июль', 'Август', 'Сентябрь'], ['Октябрь', 'Ноябрь', 'Декабрь']]
 }
 
+const errorMessage = () => {
+  bot.sendMessage(customer.id, customer.language_code === 'ru' ?
+    'Что-то пошло не так. Начните заказ сначала набрав /start' :
+    'Something went wrong. Please restart the order by typing /start',
+    {
+      reply_markup: {
+        keyboard: [['/start']]
+      }
+    }
+  ).catch(err => console.log(err))
+}
 
 const daysInMonth = (month, year) => {
   let monthNumber = 1;
@@ -73,6 +72,7 @@ const daysInMonth = (month, year) => {
 const createOrder = () => {
   return `*Получен новый заказ:* \n
  Страна: ${customer.requested_country}
+ Город: ${customer.requested_city}
  Дата получение автомобиля: ${customer.pick_up_day} ${customer.pick_up_month} 2020
  Дата возврата автомобиля: ${customer.return_day} ${customer.return_month} 2020
  Класс автомобиля: ${customer.requested_car_class}
@@ -84,6 +84,7 @@ const customerOrder = () => {
   Ваш заказ принят и будет рассмотрен в ближайшее время. 
   |*Заказ:*
   | Страна: ${customer.requested_country}
+  | Город: ${customer.requested_city}
   | Дата получение автомобиля: ${customer.pick_up_day} ${customer.pick_up_month} 2020
   | Дата возврата автомобиля: ${customer.return_day} ${customer.return_month} 2020
   | Класс автомобиля: ${customer.requested_car_class}
@@ -93,6 +94,7 @@ const customerOrder = () => {
   
   |*Order:* 
   |Country: ${customer.requested_country}
+  |City: ${customer.requested_city}
   |Pick up date: ${customer.pick_up_day} ${customer.pick_up_month} 2020
   |Return date: ${customer.return_day} ${customer.return_month} 2020
   |Car class: ${customer.requested_car_class}
@@ -115,8 +117,8 @@ const replyContriesKeyboard = (user) => {
   return countries[user.language_code].map(subcountries => {
     return subcountries.map(country => { return country })
   })
-
 }
+
 const replyContries = (user) => {
   return countries[user.language_code].map(subcountries => {
     return subcountries.map(country => {
@@ -129,6 +131,33 @@ const replyContries = (user) => {
   return buttons
 }
 
+const responseWithCitities = async (user, country) => {
+  const cities = await getCitiesByCountryName(country);
+  //const displayCities = []
+  let displayCities = [];
+
+  for (let i = 0, temp = []; i < cities.length; i++) {
+    temp.push(cities[i])
+    if (i % 3 === 0) {
+      temp = []
+      displayCities.push(temp)
+    }
+  }
+  //console.log(displayCities)
+  bot.sendMessage(user.id, reply(user), {
+    reply_markup: {
+      inline_keyboard:
+        displayCities.map(city => {
+          return city.map(subCity => {
+            return {
+              text: subCity,
+              callback_data: subCity
+            }
+          })
+        })
+    }
+  })
+}
 
 const daysButtons = (month, user) => {
   const numberOfDays = daysInMonth(month, 2020);
@@ -209,17 +238,22 @@ const responseMonth = (user) => {
 
 const translate = async (word) => {
   const translateUrl = `https://translate.yandex.net/api/v1.5/tr.json/translate?key=${API_KEY}&text=${word}&lang=en`
-  console.log(translateUrl)
-  const response = await fetch(translateUrl)
+  const encodeUrl = encodeURI(translateUrl);
+  const response = await fetch(encodeUrl)
   const data = await response.json();
-  console.log(data)
+  return data.text[0];
+}
 
+const getCitiesByCountryName = async country => {
+  //console.log(country)
+  const response = await fetch(url);
+  const data = await response.json();
+  airports = data.filter(airport => airport.country === country)
+  const cities = [...new Set(airports.map((airport => airport.city)))]
+  return cities.slice(0, 9);
 }
-//translate('Берлин') TODO Translate the cities//
-const responseWithCitities = (user) => {
-  console.log(user.requested_country);
-  //if ()
-}
+
+
 const responseDay = (user, pickup) => {
   bot.sendMessage(user.id, reply(user), {
     reply_markup: {
@@ -229,7 +263,7 @@ const responseDay = (user, pickup) => {
   }).catch(err => console.log(err))
 }
 
-bot.on('callback_query', query => {
+bot.on('callback_query', async query => {
   customer.step++;
   const lang = customer.language_code;
   switch (customer.step) {
@@ -241,11 +275,15 @@ bot.on('callback_query', query => {
           'Пожалуйста напишите страну, в которой вы хотите снять машину')
       } else {
         customer.requested_country = query.data;
-        // responseMonth(customer, true)
-        responseWithCitities(customer);
+        translate(query.data)
+          .then(country => responseWithCitities(customer, country))
+          .catch(err => console.log(err));
       }
       break;
-    case 2: break;
+    case 2: customer.requested_city = await query.data
+      console.log(customer.requested_city)
+      responseMonth(customer, true)
+      break;
     case 3: customer.pick_up_month = query.data;
       responseDay(customer, true);
       break;
@@ -272,12 +310,14 @@ bot.on('callback_query', query => {
   }
 })
 
-bot.on('message', msg => {
+bot.on('message', async msg => {
   if (customer.step !== undefined) {
 
     if (customer.step === 1) {
       customer.requested_country = msg.text;
-      responseMonth(customer, true)
+      //responseMonth(customer, true)
+      const translatedCountry = await translate(msg.text)
+      responseWithCitities(customer, translatedCountry)
     }
     else {
       bot.sendMessage(msg.chat.id, customer.language_code === 'en' ? 'Something went wrong. Please restart the process' : 'Что-то пошло не так. Начните сначала', {

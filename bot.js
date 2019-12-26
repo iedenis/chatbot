@@ -205,7 +205,7 @@ const reply = (user) => {
 
 bot.onText(/\/start/, msg => {
   customer = msg.from;
-  customer.language_code = 'ru'
+  //customer.language_code = 'ru'
   customer.language_code = customer.language_code === 'ru' ? 'ru' : 'en'
   customer.step = 0;
   bot.sendMessage(msg.chat.id, reply(customer), {

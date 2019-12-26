@@ -133,17 +133,12 @@ const replyContries = (user) => {
 
 const responseWithCitities = async (user, country) => {
   const cities = await getCitiesByCountryName(country);
-  //const displayCities = []
   let displayCities = [];
-
-  for (let i = 0, temp = []; i < cities.length; i++) {
-    temp.push(cities[i])
-    if (i % 3 === 0) {
-      temp = []
-      displayCities.push(temp)
-    }
+  let temp = []
+  while (cities.length > 0) {
+    displayCities.push(cities.splice(0, 3))
   }
-  //console.log(displayCities)
+
   bot.sendMessage(user.id, reply(user), {
     reply_markup: {
       inline_keyboard:

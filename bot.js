@@ -44,7 +44,8 @@ const months = {
   ru: [['Январь', 'Февраль', 'Март'], ['Апрель', 'Май', 'Июнь'], ['Июль', 'Август', 'Сентябрь'], ['Октябрь', 'Ноябрь', 'Декабрь']]
 }
 
-const errorMessage = () => {
+const errorMessage = (err) => {
+  console.log(err)
   bot.sendMessage(customer.id, customer.language_code === 'ru' ?
     'Что-то пошло не так. Начните заказ сначала набрав /start' :
     'Something went wrong. Please restart the order by typing /start',
@@ -133,26 +134,32 @@ const replyContries = (user) => {
 }
 
 const responseWithCitities = async (user, country) => {
-  const cities = await getCitiesByCountryName(country);
-  let displayCities = [];
-  let temp = []
-  while (cities.length > 0) {
-    displayCities.push(cities.splice(0, 3))
+  if (country !== undefined) {
+    const cities = await getCitiesByCountryName(country);
+    let displayCities = [];
+    let temp = []
+    while (cities.length > 0) {
+      displayCities.push(cities.splice(0, 3))
+    }
+
+    bot.sendMessage(user.id, reply(user), {
+      reply_markup: {
+        inline_keyboard:
+          displayCities.map(city => {
+            return city.map(subCity => {
+              return {
+                text: subCity,
+                callback_data: subCity
+              }
+            })
+          })
+      }
+    })
+  }
+  else {
+    errorMessage('country is undefined')
   }
 
-  bot.sendMessage(user.id, reply(user), {
-    reply_markup: {
-      inline_keyboard:
-        displayCities.map(city => {
-          return city.map(subCity => {
-            return {
-              text: subCity,
-              callback_data: subCity
-            }
-          })
-        })
-    }
-  })
 }
 
 const daysButtons = (month, user) => {
@@ -203,7 +210,6 @@ const partialOrder = (user) => {
   Частичный заказ:
     \n ${user.requested_country !== undefined ? `Страна ${user.requested_country}` : ``}
       ${user.requested_city !== undefined ? `Город: ${user.requested_city}` : ``}
-     
      ${(user.pick_up_day !== undefined) && (user.pick_up_month != undefined) ? (`Дата получение автомобиля: ${user.pick_up_day} ${user.pick_up_month}`) : ``} 2020
  ${ (user.return_day !== undefined) && (user.return_month !== undefined) ? (`Дата возврата автомобиля: ${user.return_day}  ${user.return_month}`) : ``} 2020
  [Для Связи](tg://user?id=${user.id}`
@@ -256,8 +262,15 @@ const responseMonth = (user) => {
 const translate = async (word) => {
   const translateUrl = `https://translate.yandex.net/api/v1.5/tr.json/translate?key=${API_KEY}&text=${word}&lang=en`
   const encodeUrl = encodeURI(translateUrl);
-  const response = await fetch(encodeUrl)
-  const data = await response.json();
+  let response, data;
+  try {
+    response = await fetch(encodeUrl)
+    data = await response.json();
+  }
+  catch (err) {
+    errorMessage(err)
+    return undefined;
+  }
   return data.text[0];
 }
 

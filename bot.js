@@ -198,18 +198,27 @@ const reply = (user) => {
   return messages[user.language_code][user.step]
 }
 
+const partialOrder = (user) => {
+  return ` 
+  Частичный заказ:
+    \n ${user.requested_country !== undefined ? `Страна ${user.requested_country}` : ``}
+      ${user.requested_city !== undefined ? `Город: ${user.requested_city}` : ``}
+     
+     ${(user.pick_up_day !== undefined) && (user.pick_up_month != undefined) ? (`Дата получение автомобиля: ${user.pick_up_day} ${user.pick_up_month}`) : ``} 2020
+ ${ (user.return_day !== undefined) && (user.return_month !== undefined) ? (`Дата возврата автомобиля: ${user.return_day}  ${user.return_month}`) : ``} 2020
+ [Для Связи](tg://user?id=${user.id}`
+
+}
+
 
 bot.onText(/\/start/, msg => {
   customer = msg.from;
   customer.isFinished = false;
+
   setTimeout(() => {
     if (!customer.isFinished) {
       bot.sendMessage(admin_id,
-        `Начал заказ и не закончил. 
-    ---------------------
-    |  [Заказчик](tg://user?id=${customer.id}) |
-    ---------------------
-      `,
+        partialOrder(customer),
         { parse_mode: 'Markdown' })
     }
   }, 600000);
@@ -289,7 +298,7 @@ bot.on('callback_query', async query => {
       }
       break;
     case 2: customer.requested_city = await query.data
-     // consoleconsole.log(customer.requested_city)
+      // consoleconsole.log(customer.requested_city)
       responseMonth(customer, true)
       break;
     case 3: customer.pick_up_month = query.data;
